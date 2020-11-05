@@ -14,17 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vppagenthelper
+package vpphelper
 
 const (
-	vppConfFilename = "/etc/vpp/vpp.conf"
+	vppConfFilename = "/etc/vpp/helper/vpp.conf"
 	vppConfContents = `unix {
   nodaemon
   log %[1]s/var/log/vpp/vpp.log
   full-coredump
   cli-listen %[1]s/var/run/vpp/cli.sock
   gid vpp
-  poll-sleep-usec 1000
 }
 
 api-trace {
