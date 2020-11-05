@@ -25,10 +25,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	govpp "git.fd.io/govpp.git"
 	"git.fd.io/govpp.git/core"
 	"github.com/edwarnicke/exechelper"
+	"github.com/pkg/errors"
+	"gopkg.in/fsnotify.v1"
 
 	"github.com/edwarnicke/log"
 )
@@ -37,7 +40,8 @@ import (
 // Stdout and Stderr for vpp are set to be log.Entry(ctx).Writer().
 func StartAndDialContext(ctx context.Context, opts ...Option) (conn *core.Connection, errCh <-chan error) {
 	o := &option{
-		rootDir: DefaultRootDir,
+		rootDir:    DefaultRootDir,
+		connectCtx: ctx,
 	}
 	for _, opt := range opts {
 		opt(o)
@@ -63,23 +67,8 @@ func StartAndDialContext(ctx context.Context, opts ...Option) (conn *core.Connec
 		return nil, errCh
 	default:
 	}
-	socketFile := filepath.Join(o.rootDir, "/var/run/vpp/api.sock")
-	for {
-		// TODO - we need a proper timeout for this
-		_, err := os.Stat(socketFile)
-		if err != nil && !os.IsNotExist(err) {
-			errCh := make(chan error, 1)
-			errCh <- err
-			close(errCh)
-			return nil, errCh
-		}
-		if os.IsNotExist(err) {
-			log.Entry(ctx).Infof("No socket file at %s yet, will try again", socketFile)
-			continue
-		}
-		break
-	}
-	conn, err := govpp.Connect(socketFile)
+
+	conn, err := connect(o.connectCtx, filepath.Join(o.rootDir, "/var/run/vpp/api.sock"))
 	if err != nil {
 		errCh := make(chan error, 1)
 		errCh <- err
@@ -113,4 +102,34 @@ func writeDefaultConfigFiles(ctx context.Context, o *option) error {
 		return err
 	}
 	return nil
+}
+
+func connect(ctx context.Context, filename string) (*core.Connection, error) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = watcher.Close() }()
+	if err := watcher.Add(filepath.Dir(filename)); err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		now := time.Now()
+		for {
+			select {
+			// watch for events
+			case event := <-watcher.Events:
+				if event.Name == filename && event.Op == fsnotify.Create {
+					log.Entry(ctx).Infof("%s was created after %s", filename, time.Since(now))
+					return govpp.Connect(filename)
+				}
+				// watch for errors
+			case err := <-watcher.Errors:
+				return nil, err
+			case <-ctx.Done():
+				return nil, errors.WithStack(ctx.Err())
+			}
+		}
+	}
+	return govpp.Connect(filename)
 }
