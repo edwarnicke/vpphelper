@@ -14,9 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package vppagenthelper provides a simple StartAndDialContext function that will start up a local vppagent,
+// Package vpphelper provides a simple Start function that will start up a local vpp,
 // dial it, and return the grpc.ClientConnInterface
-package vppagenthelper
+package vpphelper
 
 import (
 	"context"
@@ -26,16 +26,16 @@ import (
 	"path"
 	"path/filepath"
 
+	govpp "git.fd.io/govpp.git"
+	"git.fd.io/govpp.git/core"
 	"github.com/edwarnicke/exechelper"
 
 	"github.com/edwarnicke/log"
 )
 
 // StartAndDialContext - starts vpp
-// Stdout and Stderr for the vppagent and vpp are set to be log.Entry(ctx).Writer().
-func StartAndDialContext(ctx context.Context, opts ...Option) (apiSocketFilename string, errCh chan error) {
-	errCh = make(chan error, 5)
-
+// Stdout and Stderr for vpp are set to be log.Entry(ctx).Writer().
+func StartAndDialContext(ctx context.Context, opts ...Option) (conn *core.Connection, errCh <-chan error) {
 	o := &option{
 		rootDir: DefaultRootDir,
 	}
@@ -44,9 +44,10 @@ func StartAndDialContext(ctx context.Context, opts ...Option) (apiSocketFilename
 	}
 
 	if err := writeDefaultConfigFiles(ctx, o); err != nil {
+		errCh := make(chan error, 1)
 		errCh <- err
 		close(errCh)
-		return "", errCh
+		return nil, errCh
 	}
 	logWriter := log.Entry(ctx).WithField("cmd", "vpp").Writer()
 	vppErrCh := exechelper.Start("vpp -c "+filepath.Join(o.rootDir, vppConfFilename),
@@ -56,12 +57,22 @@ func StartAndDialContext(ctx context.Context, opts ...Option) (apiSocketFilename
 	)
 	select {
 	case err := <-vppErrCh:
+		errCh := make(chan error, 1)
 		errCh <- err
 		close(errCh)
-		return "", errCh
+		return nil, errCh
 	default:
 	}
-	return filepath.Join(o.rootDir, "/run/vpp/api.sock"), errCh
+
+	conn, err := govpp.Connect(filepath.Join(o.rootDir, "/run/vpp/api.sock"))
+	if err != nil {
+		errCh := make(chan error, 1)
+		errCh <- err
+		close(errCh)
+		return nil, errCh
+	}
+
+	return conn, vppErrCh
 }
 
 func writeDefaultConfigFiles(ctx context.Context, o *option) error {
