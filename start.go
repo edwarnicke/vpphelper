@@ -63,8 +63,23 @@ func StartAndDialContext(ctx context.Context, opts ...Option) (conn *core.Connec
 		return nil, errCh
 	default:
 	}
-
-	conn, err := govpp.Connect(filepath.Join(o.rootDir, "/run/vpp/api.sock"))
+	socketFile := filepath.Join(o.rootDir, "/var/run/vpp/api.sock")
+	for {
+		// TODO - we need a proper timeout for this
+		_, err := os.Stat(socketFile)
+		if err != nil && !os.IsNotExist(err) {
+			errCh := make(chan error, 1)
+			errCh <- err
+			close(errCh)
+			return nil, errCh
+		}
+		if os.IsNotExist(err) {
+			log.Entry(ctx).Infof("No socket file at %s yet, will try again", socketFile)
+			continue
+		}
+		break
+	}
+	conn, err := govpp.Connect(socketFile)
 	if err != nil {
 		errCh := make(chan error, 1)
 		errCh <- err
