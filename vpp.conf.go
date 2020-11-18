@@ -26,6 +26,10 @@ const (
   gid vpp
 }
 
+## logging {
+##   default-syslog-log-level debug
+## }
+
 api-trace {
 ## This stanza controls binary API tracing. Unless there is a very strong reason,
 ## please leave this feature enabled.
