@@ -44,6 +44,7 @@ func StartAndDialContext(ctx context.Context, opts ...Option) (conn Connection, 
 	o := &option{
 		rootDir:    DefaultRootDir,
 		connectCtx: ctx,
+		vppConfig:  vppConfContents,
 	}
 	for _, opt := range opts {
 		opt(o)
@@ -75,7 +76,7 @@ func StartAndDialContext(ctx context.Context, opts ...Option) (conn Connection, 
 
 func writeDefaultConfigFiles(ctx context.Context, o *option) error {
 	configFiles := map[string]string{
-		vppConfFilename: fmt.Sprintf(vppConfContents, o.rootDir),
+		vppConfFilename: fmt.Sprintf(o.vppConfig, o.rootDir),
 	}
 	for filename, contents := range configFiles {
 		filename = filepath.Join(o.rootDir, filename)
