@@ -28,6 +28,7 @@ const (
 type option struct {
 	rootDir    string
 	connectCtx context.Context
+	vppConfig  string
 }
 
 // Option - Option for use with vppagent.Start(...)
@@ -44,5 +45,13 @@ func WithRootDir(rootDir string) Option {
 func WithConnectContext(ctx context.Context) Option {
 	return func(opt *option) {
 		opt.connectCtx = ctx
+	}
+}
+
+// WithVppConfig - vpp.conf template
+// %[1]s will be replaced in the template with the value of the rootDir
+func WithVppConfig(vppConfig string) Option {
+	return func(opt *option) {
+		opt.vppConfig = vppConfig
 	}
 }
