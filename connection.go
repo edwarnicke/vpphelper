@@ -40,49 +40,37 @@ func newConnection(ctx context.Context, filename string) Connection {
 	c := &connection{
 		ready: make(chan struct{}),
 	}
-	go func(ctx context.Context, filename string, c *connection) {
-		watcher, err := fsnotify.NewWatcher()
-		if err != nil {
-			c.err = err
-			return
-		}
-		defer func() { _ = watcher.Close() }()
-		if err = watcher.Add(filepath.Dir(filename)); err != nil {
-			c.err = errors.WithStack(err)
-			return
-		}
-		now := time.Now()
-		_, err = os.Stat(filename)
-		if os.IsNotExist(err) {
-			for {
-				select {
-				// watch for events
-				case event := <-watcher.Events:
-					if event.Name == filename && event.Op == fsnotify.Create {
-						log.Entry(ctx).Infof("%s was created after %s", filename, time.Since(now))
-						c.Connection, c.err = govpp.Connect(filename)
-						close(c.ready)
-						return
-					}
-					// watch for errors
-				case err = <-watcher.Errors:
-					c.err = errors.WithStack(err)
-					return
-				case <-ctx.Done():
-					c.err = errors.WithStack(ctx.Err())
-					return
-				}
-			}
-		}
-		if err != nil {
-			c.err = errors.WithStack(err)
-			return
-		}
-		log.Entry(ctx).Infof("%s was created after %s", filename, time.Since(now))
-		c.Connection, c.err = govpp.Connect(filename)
-		close(c.ready)
-	}(ctx, filename, c)
+	go c.connect(ctx, filename)
 	return c
+}
+
+func (c *connection) connect(ctx context.Context, filename string) {
+	defer close(c.ready)
+	now := time.Now()
+	c.err = waitForSocket(ctx, filename)
+	if c.err != nil {
+		log.Entry(ctx).Debugf("%s was not created after %s due to %+v", filename, time.Since(now), c.err)
+		return
+	}
+	log.Entry(ctx).Debugf("%s was created after %s", filename, time.Since(now))
+	now = time.Now()
+	attempts := 1
+	for {
+		select {
+		case <-ctx.Done():
+			c.err = errors.WithStack(ctx.Err())
+			log.Entry(ctx).Debugf("unable to connect to %s after %s due to %+v", filename, time.Since(now), c.err)
+			return
+		default:
+			c.Connection, c.err = govpp.Connect(filename)
+			if c.err == nil {
+				log.Entry(ctx).Debugf("successfully connected to %s after %s and %d attempts", filename, time.Since(now), attempts)
+				return
+			}
+			attempts++
+			<-time.After(time.Millisecond)
+		}
+	}
 }
 
 func (c *connection) NewStream(ctx context.Context) (api.Stream, error) {
@@ -126,3 +114,36 @@ func (c *connection) NewAPIChannelBuffered(reqChanBufSize, replyChanBufSize int)
 }
 
 var _ Connection = &connection{}
+
+func waitForSocket(ctx context.Context, filename string) error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer func() { _ = watcher.Close() }()
+	if err = watcher.Add(filepath.Dir(filename)); err != nil {
+		return errors.WithStack(err)
+	}
+
+	_, err = os.Stat(filename)
+	if os.IsNotExist(err) {
+		for {
+			select {
+			// watch for events
+			case event := <-watcher.Events:
+				if event.Name == filename && event.Op == fsnotify.Create {
+					return nil
+				}
+				// watch for errors
+			case err = <-watcher.Errors:
+				return errors.WithStack(err)
+			case <-ctx.Done():
+				return errors.WithStack(err)
+			}
+		}
+	}
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
