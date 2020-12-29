@@ -42,9 +42,8 @@ type Connection interface {
 // Stdout and Stderr for vpp are set to be log.Entry(ctx).Writer().
 func StartAndDialContext(ctx context.Context, opts ...Option) (conn Connection, errCh <-chan error) {
 	o := &option{
-		rootDir:    DefaultRootDir,
-		connectCtx: ctx,
-		vppConfig:  vppConfContents,
+		rootDir:   DefaultRootDir,
+		vppConfig: vppConfContents,
 	}
 	for _, opt := range opts {
 		opt(o)
@@ -71,7 +70,7 @@ func StartAndDialContext(ctx context.Context, opts ...Option) (conn Connection, 
 	default:
 	}
 
-	return newConnection(o.connectCtx, filepath.Join(o.rootDir, "/var/run/vpp/api.sock")), vppErrCh
+	return newConnection(ctx, filepath.Join(o.rootDir, "/var/run/vpp/api.sock")), vppErrCh
 }
 
 func writeDefaultConfigFiles(ctx context.Context, o *option) error {
