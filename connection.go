@@ -138,7 +138,7 @@ func waitForSocket(ctx context.Context, filename string) error {
 			case err = <-watcher.Errors:
 				return errors.WithStack(err)
 			case <-ctx.Done():
-				return errors.WithStack(err)
+				return errors.WithStack(ctx.Err())
 			}
 		}
 	}

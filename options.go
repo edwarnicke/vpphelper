@@ -16,19 +16,14 @@
 
 package vpphelper
 
-import (
-	"context"
-)
-
 const (
 	// DefaultRootDir - Default value for RootDir
 	DefaultRootDir = ""
 )
 
 type option struct {
-	rootDir    string
-	connectCtx context.Context
-	vppConfig  string
+	rootDir   string
+	vppConfig string
 }
 
 // Option - Option for use with vppagent.Start(...)
@@ -38,13 +33,6 @@ type Option func(opt *option)
 func WithRootDir(rootDir string) Option {
 	return func(opt *option) {
 		opt.rootDir = rootDir
-	}
-}
-
-// WithConnectContext - context.Context to use to canceling/timing out attempt to connect to vpp
-func WithConnectContext(ctx context.Context) Option {
-	return func(opt *option) {
-		opt.connectCtx = ctx
 	}
 }
 
