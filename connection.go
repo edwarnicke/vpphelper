@@ -73,7 +73,7 @@ func (c *connection) connect(ctx context.Context, filename string) {
 	}
 }
 
-func (c *connection) NewStream(ctx context.Context) (api.Stream, error) {
+func (c *connection) NewStream(ctx context.Context, options ...api.StreamOption) (api.Stream, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -82,7 +82,7 @@ func (c *connection) NewStream(ctx context.Context) (api.Stream, error) {
 			return nil, c.err
 		}
 	}
-	return c.Connection.NewStream(ctx)
+	return c.Connection.NewStream(ctx, options...)
 }
 
 func (c *connection) Invoke(ctx context.Context, req, reply api.Message) error {
