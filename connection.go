@@ -36,7 +36,10 @@ type connection struct {
 	err   error
 }
 
-func newConnection(ctx context.Context, filename string) Connection {
+// DialContext - Dials vpp and returns a Connection
+// DialContext is 'lazy' meaning that if there is no socket yet at filename, we will continue to try
+// until there is one or the ctx is canceled.
+func DialContext(ctx context.Context, filename string) Connection {
 	c := &connection{
 		ready: make(chan struct{}),
 	}
