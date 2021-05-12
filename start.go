@@ -70,7 +70,7 @@ func StartAndDialContext(ctx context.Context, opts ...Option) (conn Connection, 
 	default:
 	}
 
-	return newConnection(ctx, filepath.Join(o.rootDir, "/var/run/vpp/api.sock")), vppErrCh
+	return DialContext(ctx, filepath.Join(o.rootDir, "/var/run/vpp/api.sock")), vppErrCh
 }
 
 func writeDefaultConfigFiles(ctx context.Context, o *option) error {
