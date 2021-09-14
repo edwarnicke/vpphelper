@@ -38,9 +38,25 @@ type Connection interface {
 	api.ChannelProvider
 }
 
+type ExternalConnection struct {
+	Connection
+}
+
+func (c *ExternalConnection) IsExternal() bool {
+	return true
+}
+
+type InternalConnection struct {
+	Connection
+}
+
+func (c *InternalConnection) IsExternal() bool {
+	return false
+}
+
 // StartAndDialContext - starts vpp
 // Stdout and Stderr for vpp are set to be log.Entry(ctx).Writer().
-func StartAndDialContext(ctx context.Context, opts ...Option) (conn Connection, errCh <-chan error) {
+func StartAndDialContext(ctx context.Context, opts ...Option) (conn *InternalConnection, errCh <-chan error) {
 	o := &option{
 		rootDir:   DefaultRootDir,
 		vppConfig: vppConfContents,
@@ -70,7 +86,9 @@ func StartAndDialContext(ctx context.Context, opts ...Option) (conn Connection, 
 	default:
 	}
 
-	return DialContext(ctx, filepath.Join(o.rootDir, "/var/run/vpp/api.sock")), vppErrCh
+	return &InternalConnection{
+		Connection: DialContext(ctx, filepath.Join(o.rootDir, "/var/run/vpp/api.sock")),
+	}, vppErrCh
 }
 
 func writeDefaultConfigFiles(ctx context.Context, o *option) error {

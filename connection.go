@@ -39,12 +39,14 @@ type connection struct {
 // DialContext - Dials vpp and returns a Connection
 // DialContext is 'lazy' meaning that if there is no socket yet at filename, we will continue to try
 // until there is one or the ctx is canceled.
-func DialContext(ctx context.Context, filename string) Connection {
+func DialContext(ctx context.Context, filename string) *ExternalConnection {
 	c := &connection{
 		ready: make(chan struct{}),
 	}
 	go c.connect(ctx, filename)
-	return c
+	return &ExternalConnection{
+		Connection: c,
+	}
 }
 
 func (c *connection) connect(ctx context.Context, filename string) {
