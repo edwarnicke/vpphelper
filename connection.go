@@ -36,7 +36,7 @@ type connection struct {
 	err   error
 }
 
-// DialContext - Dials vpp and returns a Connection
+// DialContext - Dials vpp and returns an ExternalConnection
 // DialContext is 'lazy' meaning that if there is no socket yet at filename, we will continue to try
 // until there is one or the ctx is canceled.
 func DialContext(ctx context.Context, filename string) *ExternalConnection {

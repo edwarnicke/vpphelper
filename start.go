@@ -38,23 +38,27 @@ type Connection interface {
 	api.ChannelProvider
 }
 
+// ExternalConnection is a Connection to the VPP that is external to the user application pod
 type ExternalConnection struct {
 	Connection
 }
 
+// IsExternal returns true
 func (c *ExternalConnection) IsExternal() bool {
 	return true
 }
 
+// InternalConnection is a Connection to the VPP that is internal to the user application pod
 type InternalConnection struct {
 	Connection
 }
 
+// IsExternal returns false
 func (c *InternalConnection) IsExternal() bool {
 	return false
 }
 
-// StartAndDialContext - starts vpp
+// StartAndDialContext - starts vpp and returns an InternalConnection
 // Stdout and Stderr for vpp are set to be log.Entry(ctx).Writer().
 func StartAndDialContext(ctx context.Context, opts ...Option) (conn *InternalConnection, errCh <-chan error) {
 	o := &option{
