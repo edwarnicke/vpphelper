@@ -42,8 +42,9 @@ type Connection interface {
 // Stdout and Stderr for vpp are set to be log.Entry(ctx).Writer().
 func StartAndDialContext(ctx context.Context, opts ...Option) (conn Connection, errCh <-chan error) {
 	o := &option{
-		rootDir:   DefaultRootDir,
-		vppConfig: vppConfContents,
+		rootDir:          DefaultRootDir,
+		vppConfig:        vppConfContents,
+		additionalStanza: "",
 	}
 	for _, opt := range opts {
 		opt(o)
@@ -75,7 +76,7 @@ func StartAndDialContext(ctx context.Context, opts ...Option) (conn Connection, 
 
 func writeDefaultConfigFiles(ctx context.Context, o *option) error {
 	configFiles := map[string]string{
-		vppConfFilename: fmt.Sprintf(o.vppConfig, o.rootDir),
+		vppConfFilename: fmt.Sprintf(o.vppConfig, o.rootDir, o.additionalStanza),
 	}
 	for filename, contents := range configFiles {
 		filename = filepath.Join(o.rootDir, filename)

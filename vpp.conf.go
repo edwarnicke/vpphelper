@@ -189,5 +189,6 @@ cpu {
 plugins {
 	plugin dpdk_plugin.so { disable }
 }
+%[2]s
 `
 )

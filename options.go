@@ -22,8 +22,9 @@ const (
 )
 
 type option struct {
-	rootDir   string
-	vppConfig string
+	rootDir          string
+	vppConfig        string
+	additionalStanza string
 }
 
 // Option - Option for use with vppagent.Start(...)
@@ -41,5 +42,12 @@ func WithRootDir(rootDir string) Option {
 func WithVppConfig(vppConfig string) Option {
 	return func(opt *option) {
 		opt.vppConfig = vppConfig
+	}
+}
+
+// %[2] will be replaced with the stanza
+func WithStanza(stanza string) Option {
+	return func(opt *option) {
+		opt.additionalStanza = stanza
 	}
 }
