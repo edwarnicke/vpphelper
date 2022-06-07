@@ -50,7 +50,7 @@ func DialContext(ctx context.Context, filename string) Connection {
 func (c *connection) connect(ctx context.Context, filename string) {
 	defer close(c.ready)
 	now := time.Now()
-	c.err = waitForSocket(ctx, filename)
+	c.err = WaitForSocket(ctx, filename)
 	if c.err != nil {
 		log.Entry(ctx).Debugf("%s was not created after %s due to %+v", filename, time.Since(now), c.err)
 		return
@@ -118,7 +118,8 @@ func (c *connection) NewAPIChannelBuffered(reqChanBufSize, replyChanBufSize int)
 
 var _ Connection = &connection{}
 
-func waitForSocket(ctx context.Context, filename string) error {
+// WaitForSocket - wait for a given filename
+func WaitForSocket(ctx context.Context, filename string) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return errors.WithStack(err)
