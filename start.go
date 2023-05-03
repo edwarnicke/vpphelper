@@ -25,6 +25,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/edwarnicke/exechelper"
@@ -55,7 +56,9 @@ func StartAndDialContext(ctx context.Context, opts ...Option) (conn Connection, 
 		close(errCh)
 		return nil, errCh
 	}
-	logWriter := log.Entry(ctx).WithField("cmd", "vpp").Writer()
+	// We need to reset time in logger to make sure that
+	// we don't use a static timestamp for a long-running process
+	logWriter := log.Entry(ctx).WithField("cmd", "vpp").WithTime(time.Time{}).Writer()
 	vppErrCh := exechelper.Start("vpp -c "+filepath.Join(o.rootDir, vppConfFilename),
 		exechelper.WithContext(ctx),
 		exechelper.WithStdout(logWriter),
