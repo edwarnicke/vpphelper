@@ -25,6 +25,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	"git.fd.io/govpp.git/api"
 	"github.com/edwarnicke/exechelper"
@@ -55,7 +56,9 @@ func StartAndDialContext(ctx context.Context, opts ...Option) (conn Connection, 
 		close(errCh)
 		return nil, errCh
 	}
-	logWriter := log.Entry(ctx).WithField("cmd", "vpp").Writer()
+	// We need to reset time in logger to make sure that
+	// we don't use a static timestamp for a long-running process
+	logWriter := log.Entry(ctx).WithField("cmd", "vpp").WithTime(time.Time{}).Writer()
 	vppErrCh := exechelper.Start("vpp -c "+filepath.Join(o.rootDir, vppConfFilename),
 		exechelper.WithContext(ctx),
 		exechelper.WithStdout(logWriter),
@@ -81,18 +84,18 @@ func writeDefaultConfigFiles(ctx context.Context, o *option) error {
 		filename = filepath.Join(o.rootDir, filename)
 		if _, err := os.Stat(filename); os.IsNotExist(err) {
 			log.Entry(ctx).Infof("Configuration file: %q not found, using defaults", filename)
-			if err := os.MkdirAll(path.Dir(filename), 0700); err != nil {
+			if err := os.MkdirAll(path.Dir(filename), 0o700); err != nil {
 				return err
 			}
-			if err := ioutil.WriteFile(filename, []byte(contents), 0600); err != nil {
+			if err := ioutil.WriteFile(filename, []byte(contents), 0o600); err != nil {
 				return err
 			}
 		}
 	}
-	if err := os.MkdirAll(filepath.Join(o.rootDir, "/var/run/vpp"), 0700); os.IsNotExist(err) {
+	if err := os.MkdirAll(filepath.Join(o.rootDir, "/var/run/vpp"), 0o700); os.IsNotExist(err) {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(o.rootDir, "/var/log/vpp"), 0700); os.IsNotExist(err) {
+	if err := os.MkdirAll(filepath.Join(o.rootDir, "/var/log/vpp"), 0o700); os.IsNotExist(err) {
 		return err
 	}
 	return nil
